@@ -78,3 +78,17 @@ export const updateUser = asyncHandler(async (req, res, next) => {
     .status(StatusCodes.OK)
     .json({ status: 'success', data: { user: updatedUser } });
 });
+
+// @ Change User Role
+// @ PATCH /api/v1/users/:userId/role
+
+export const changeUserRole = asyncHandler(async (req, res, next) => {
+  const { userId } = req.params;
+  const role = req.body;
+  const user = await User.findById(userId);
+  if (!user) throw new createError.NotFound('invalid user id');
+
+  await User.findByIdAndUpdate(userId, { $set: role }, { runValidators: true });
+
+  res.json({ status: 'success' });
+});

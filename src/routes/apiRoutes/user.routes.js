@@ -5,6 +5,7 @@ import {
   ensureAuthorized,
 } from '../../middleware/auth.middleware.js';
 import {
+  changeUserRole,
   deleteUser,
   getAllUsers,
   getCurrentUser,
@@ -12,7 +13,10 @@ import {
   refreshToken,
   updateUser,
 } from '../../controllers/user.controller.js';
-import { updateUserValidator } from '../../validators/user.validators.js';
+import {
+  changeUserRoleValidator,
+  updateUserValidator,
+} from '../../validators/user.validators.js';
 
 const router = Router();
 // @ /api/v1/users
@@ -34,6 +38,13 @@ router
   .get(ensureAuthenticated, ensureAuthorized(['admin']), getSingleUser)
   .delete(ensureAuthenticated, ensureAuthorized(['admin']), deleteUser);
 
-router.route('/:userId');
+router
+  .route('/:userId/role')
+  .patch(
+    ensureAuthenticated,
+    ensureAuthorized(['admin']),
+    changeUserRoleValidator,
+    changeUserRole
+  );
 
 export { router };

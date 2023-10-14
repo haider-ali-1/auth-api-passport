@@ -3,7 +3,7 @@ import { filterStackMessage } from '../utils/helpers.js';
 import createError from 'http-errors';
 
 export const errorHandlerMiddleware = (err, req, res, next) => {
-  // console.log(Object.getOwnPropertyDescriptors(err));
+  console.log(Object.getOwnPropertyDescriptors(err));
   let statusCode = 500;
   let message = 'Internal Server Error';
   // error from express-validator
@@ -30,6 +30,10 @@ export const errorHandlerMiddleware = (err, req, res, next) => {
     const value = err.keyValue[key];
     errorMessage = `${key} ${value} already exists please try another`;
     statusCode = StatusCodes.CONFLICT;
+  }
+
+  if (err.name === 'ValidationError') {
+    res.json({ err });
   }
 
   // response that shoule be send for every type of error
