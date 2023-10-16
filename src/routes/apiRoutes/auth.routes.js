@@ -4,7 +4,7 @@ import '../../passport/index.js';
 import {
   handleOAuthLogin,
   loginUser,
-  logout,
+  logoutUser,
   registerUser,
   verifyEmail,
 } from '../../controllers/auth.controller.js';
@@ -33,5 +33,5 @@ router.route('/google/callback').get(
 router.route('/register').post(registerUserValidator, registerUser);
 router.route('/verify-email/:token').get(verifyEmail);
 router.route('/login').post(loginUserValidator, loginUser);
-router.route('/logout').post(ensureAuthenticated, logout);
+router.route('/logout').post(ensureAuthenticated, logoutUser);
 export { router };

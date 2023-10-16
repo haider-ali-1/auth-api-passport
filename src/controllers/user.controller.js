@@ -38,7 +38,7 @@ export const getAllUsers = asyncHandler(async (req, res, next) => {
 export const getSingleUser = asyncHandler(async (req, res, next) => {
   const { userId } = req.params;
   const user = await User.findById(userId);
-  if (!user) throw new createError.NotFound(`invalid id`);
+  if (!user) throw new createError.NotFound(`user not found`);
   res.status(StatusCodes.OK).json({ status: 'success', data: { user } });
 });
 
@@ -70,7 +70,7 @@ export const updateUser = asyncHandler(async (req, res, next) => {
 
   const updatedUser = await User.findByIdAndUpdate(
     userId,
-    { name, email },
+    { name },
     { new: true, runValidators: true }
   );
 

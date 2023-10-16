@@ -3,13 +3,9 @@ import { filterStackMessage } from '../utils/helpers.js';
 import createError from 'http-errors';
 
 export const errorHandlerMiddleware = (err, req, res, next) => {
-  console.log(Object.getOwnPropertyDescriptors(err));
+  // console.log(Object.getOwnPropertyDescriptors(err));
   let statusCode = 500;
   let message = 'Internal Server Error';
-  // error from express-validator
-  let errorsArray = err.modifiedErrors || undefined;
-  // show stack only in development
-  let stack = process.env.NODE_ENV === 'development' ? err.stack : undefined;
 
   if (createError.isHttpError(err)) {
     statusCode = err.statusCode;
@@ -24,25 +20,34 @@ export const errorHandlerMiddleware = (err, req, res, next) => {
 
   // Mongoose Errors
 
-  // Duplicate Value Error
-  if (err.code === 11000) {
-    const key = Object.keys(err.keyValue)[0];
-    const value = err.keyValue[key];
-    errorMessage = `${key} ${value} already exists please try another`;
-    statusCode = StatusCodes.CONFLICT;
+  // Invalid ObjectId Error
+  if (err.name === 'CastError') {
+    statusCode = StatusCodes.NOT_FOUND;
+    message = `invalid ${err.path}`;
   }
 
-  if (err.name === 'ValidationError') {
+  //
+  else if (err.name === 'ValidationError') {
     res.json({ err });
   }
 
-  // response that shoule be send for every type of error
-  const jsonResponse = {
+  // Duplicate Value Error
+  else if (err.code === 11000) {
+    const key = Object.keys(err.keyValue)[0];
+    const value = err.keyValue[key];
+    //
+    statusCode = StatusCodes.CONFLICT;
+    message = `${key} already exist please try another`;
+  }
+
+  const inDevEnv = process.env.NODE_ENV === 'development';
+
+  // final error response
+  res.status(statusCode).json({
     status: 'fail',
     message,
-    errorsArray,
-    stack,
-  };
-
-  res.status(statusCode).json(jsonResponse);
+    errors: err.httpErrors || undefined,
+    originalError: inDevEnv ? (err.httpErrors ? undefined : err) : undefined,
+    stack: inDevEnv ? err.stack : undefined,
+  });
 };

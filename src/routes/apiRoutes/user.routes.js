@@ -29,22 +29,20 @@ router
   .get(ensureAuthenticated, ensureAuthorized(['admin']), getAllUsers);
 
 router
-  .route('/profile')
-  .get(ensureAuthenticated, getCurrentUser)
-  .patch(ensureAuthenticated, updateUserValidator, updateUser);
-
-router
   .route('/:userId')
   .get(ensureAuthenticated, ensureAuthorized(['admin']), getSingleUser)
   .delete(ensureAuthenticated, ensureAuthorized(['admin']), deleteUser);
 
 router
-  .route('/:userId/role')
-  .patch(
-    ensureAuthenticated,
-    ensureAuthorized(['admin']),
-    changeUserRoleValidator,
-    changeUserRole
-  );
+  .route('/profile')
+  .get(ensureAuthenticated, getCurrentUser)
+  .patch(ensureAuthenticated, updateUserValidator, updateUser);
+
+router.route('/:userId/role').patch(
+  ensureAuthenticated,
+  ensureAuthorized(['admin']),
+  // changeUserRoleValidator,
+  changeUserRole
+);
 
 export { router };

@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
-import cryptoRandomString from 'crypto-random-string';
 import jwt from 'jsonwebtoken';
 
 export const asyncHandler = (fn) => async (req, res, next) => {
@@ -63,10 +62,6 @@ export const filterStackMessage = (stack) => {
       return line.includes('file:');
     }),
   ];
-};
-
-export const randomString = (length) => {
-  return cryptoRandomString({ length, type: 'alphanumeric' });
 };
 
 export const createHmac = (randomToken, secretKey) => {

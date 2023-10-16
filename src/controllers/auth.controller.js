@@ -5,26 +5,30 @@ import {
   attachTokenToCookies,
   createHmac,
   generateAccessAndRefreshTokens,
-  randomString,
 } from '../utils/helpers.js';
 import createError from 'http-errors';
 import { sendEmail } from '../services/email.service.js';
 
 // handle OAuth login
 export const handleOAuthLogin = asyncHandler(async (req, res, next) => {
-  const { accessToken, refreshToken } = generateAccessAndRefreshTokens(
-    req.user
-  );
+  console.log(req.user);
 
-  attachTokenToCookies(res, accessToken, refreshToken);
-  res.redirect(`/dashboard`);
+  const user = await User.findById(req.user?._id);
+  const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user);
+  attachTokenToCookies(res, 'jwt', refreshToken, 24 * 60 * 60 * 1000);
+  res
+    .status(StatusCodes.OK)
+    .redirect(`http://localhost:5000/dashboard?${refreshToken}`);
+  // .json({ status: 'success', message: 'login successfully', accessToken });
 });
 
-// @ show current user profile
-// @ GET /api/v1/auth/register
+// @ Register User
+// @ POST /api/v1/auth/register
 
 export const registerUser = asyncHandler(async (req, res, next) => {
   const { name, email, password } = req.body;
+
+  // set role admin for first user register
   const role = (await User.countDocuments()) === 0 ? ['admin'] : ['user'];
 
   const { token, hashedToken } = createHmac(
@@ -43,7 +47,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
 
   // prettier-ignore
   const verificationURL = `${req.protocol}://${req.get('host')}${req.baseUrl}/verify-email/${token}`
-  const message = `please use this link for email verification\n${verificationURL}`;
+  const message = `please use this link for email verification\n${verificationURL}\nlink will expire after 15 minutes`;
 
   const mailOptions = {
     from: '"Fred Foo 👻" <foo@example.com>',
@@ -56,7 +60,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
     await sendEmail(mailOptions);
   } catch (error) {
     throw new createError.InternalServerError(
-      'an error has been occured during sending email for email'
+      'an error has been occured during sending verification email'
     );
   }
 
@@ -72,6 +76,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
 
 export const verifyEmail = asyncHandler(async (req, res, next) => {
   const emailVerificationToken = req.params.token;
+  // generate hashed token for comapre token in db
   const { hashedToken } = createHmac(
     emailVerificationToken,
     process.env.EMAIL_VERIFICATION_TOKEN_SECRET
@@ -94,8 +99,8 @@ export const verifyEmail = asyncHandler(async (req, res, next) => {
     .json({ status: 'success', message: 'your email is verified now' });
 });
 
-// @ show current user profile
-// @ GET /api/v1/auth/login
+// @ Login User
+// @ POST /api/v1/auth/login
 
 export const loginUser = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
@@ -109,11 +114,27 @@ export const loginUser = asyncHandler(async (req, res, next) => {
 
   user.refreshToken = refreshToken;
   await user.save();
-  attachTokenToCookies(res, 'jwt', refreshToken, 24 * 60 * 60 * 1000);
+  attachTokenToCookies(res, 'jwt', refreshToken, 24 * 60 * 60 * 1000); // 24 hours
 
   res
     .status(StatusCodes.OK)
-    .json({ status: 'success', data: { user, accessToken } });
+    .json({ status: 'success', message: 'login successfully', accessToken });
 });
 
-export const logout = asyncHandler(async (req, res, next) => {});
+// @ Logout User
+// @ POST /api/v1/auth/login
+
+export const logoutUser = asyncHandler(async (req, res, next) => {
+  await User.findByIdAndUpdate(
+    req.user?._id,
+    { $unset: { refreshToken: '' } },
+    { new: true }
+  );
+  res
+    .status(StatusCodes.OK)
+    .clearCookie('jwt', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+    })
+    .json({ status: 'success', message: 'logged out successfully' });
+});

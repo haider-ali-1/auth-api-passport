@@ -30,8 +30,13 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      accessType: 'offline',
+      prompt: 'consent',
     },
-    async (_, __, profile, done) => {
+    async (accessToken, refreshToken, profile, done) => {
+      console.log('Access Token', accessToken);
+      console.log('end');
+      console.log('Refresh Token', refreshToken);
       handleOAuthUser(profile, done);
     }
   )
