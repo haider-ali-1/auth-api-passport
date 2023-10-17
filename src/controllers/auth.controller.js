@@ -1,25 +1,27 @@
+import jwt from 'jsonwebtoken';
 import { StatusCodes } from 'http-status-codes';
 import { User } from '../models/user.model.js';
 import {
   asyncHandler,
   attachTokenToCookies,
+  clearCookie,
   createHmac,
   generateAccessAndRefreshTokens,
+  verifyJwt,
 } from '../utils/helpers.js';
 import createError from 'http-errors';
 import { sendEmail } from '../services/email.service.js';
 
 // handle OAuth login
 export const handleOAuthLogin = asyncHandler(async (req, res, next) => {
-  console.log(req.user);
-
   const user = await User.findById(req.user?._id);
   const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user);
+
+  user.refreshToken = refreshToken;
+  await user.save();
+
   attachTokenToCookies(res, 'jwt', refreshToken, 24 * 60 * 60 * 1000);
-  res
-    .status(StatusCodes.OK)
-    .redirect(`http://localhost:5000/dashboard?${refreshToken}`);
-  // .json({ status: 'success', message: 'login successfully', accessToken });
+  res.status(StatusCodes.OK).redirect(`http://localhost:5000/dashboard`);
 });
 
 // @ Register User
@@ -104,15 +106,16 @@ export const verifyEmail = asyncHandler(async (req, res, next) => {
 
 export const loginUser = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
-  const user = await User.findOne({ email }).select('+password');
-  const passwordMatch = await user?.compareWithHash(password, 'password');
 
+  // check if email and password are correct
+  const user = await User.findOne({ email }).select('+password +refreshTokens');
+  const passwordMatch = await user?.compareWithHash(password, 'password');
   if (!user || !passwordMatch)
     throw new createError.NotFound('incorrect email or password');
 
   const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user);
 
-  user.refreshToken = refreshToken;
+  user.refreshTokens = [...user.refreshTokens, refreshToken];
   await user.save();
   attachTokenToCookies(res, 'jwt', refreshToken, 24 * 60 * 60 * 1000); // 24 hours
 
@@ -125,16 +128,56 @@ export const loginUser = asyncHandler(async (req, res, next) => {
 // @ POST /api/v1/auth/login
 
 export const logoutUser = asyncHandler(async (req, res, next) => {
-  await User.findByIdAndUpdate(
-    req.user?._id,
-    { $unset: { refreshToken: '' } },
-    { new: true }
-  );
+  const token = req.cookies?.jwt;
+
+  // check if refresh token exist
+  if (!token) throw new createError.Unauthorized('unauthorized request');
+
+  // remove refresh token from db
+  const user = await User.findById(req.user?._id).select('+refreshTokens');
+  user.refreshTokens = user?.refreshTokens.filter((rt) => rt !== token);
+  await user.save();
+
+  // remove refresh token from cookies
+  clearCookie(res, 'jwt');
   res
     .status(StatusCodes.OK)
-    .clearCookie('jwt', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-    })
     .json({ status: 'success', message: 'logged out successfully' });
+});
+
+// @ Refresh Access Token
+// @ POST /api/v1/auth/refresh-token
+
+export const refreshAccessToken = asyncHandler(async (req, res, next) => {
+  // check if refresh token found
+  const token = req.cookies?.jwt || req.body.refreshToken;
+  if (!token) throw new createError.Unauthorized('unauthorized request');
+
+  // check if refresh token is invalid
+  const decoded = jwt.verify(token, process.env.JWT_REFRESH_TOKEN_SECRET_KEY);
+
+  // check if user exist (use select)
+  const user = await User.findById(decoded?._id).select('+refreshTokens');
+  if (!user) throw new createError.Unauthorized('invalid user id');
+
+  // check if refresh token reuse
+  if (!user.refreshTokens.includes(token)) {
+    // detected refresh token reuse logout from all
+    user.refreshTokens = [];
+    await user.save();
+
+    throw new createError.Unauthorized('invalid or expire refresh token');
+  }
+
+  const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user);
+
+  // replace previous token with new
+  user.refreshTokens = user.refreshTokens.map((rt) =>
+    rt === token ? refreshToken : rt
+  );
+
+  await user.save();
+
+  attachTokenToCookies(res, 'jwt', refreshToken, 24 * 60 * 60 * 1000);
+  res.status(StatusCodes.OK).json({ status: 'success', accessToken });
 });

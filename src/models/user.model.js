@@ -56,7 +56,7 @@ const userSchema = new Schema(
     },
     isVerified: { type: Boolean, default: false },
     // sessions: [sessionSchema],
-    refreshToken: { type: String, select: false },
+    refreshTokens: [{ type: String, select: false }],
     emailVerificationToken: { type: String, select: false },
     emailVerificationTokenExpireAt: { type: Date, select: false },
     passwordResetToken: { type: String, select: false },

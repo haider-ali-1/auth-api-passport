@@ -12,13 +12,20 @@ export const errorHandlerMiddleware = (err, req, res, next) => {
     message = err.message;
   }
 
-  // JWT Errors
+  //  ================== JWT Errors ====================
+
+  // if token expire
   if (err.name === 'TokenExpiredError') {
     statusCode = StatusCodes.UNAUTHORIZED;
-    message = 'session expired please login';
+    message = 'token expired please login';
+  }
+  // invalid jwt
+  else if (err.name === 'JsonWebTokenError') {
+    statusCode = StatusCodes.UNAUTHORIZED;
+    message = 'invalid token please login';
   }
 
-  // Mongoose Errors
+  // ================== Mongoose Errors =================
 
   // Invalid ObjectId Error
   if (err.name === 'CastError') {

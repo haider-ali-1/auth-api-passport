@@ -2,14 +2,16 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { User } from '../models/user.model.js';
 
-const handleOAuthUser = async (profile, done) => {
+const handleOAuthUser = async (done, { profile, refreshToken }) => {
+  console.log(refreshToken);
+
   const { provider, id } = profile;
   const { name, picture, email, email_verified } = profile._json;
 
-  const foundUser = await User.findOne({ email, provider });
+  let user = await User.findOne({ email, provider });
 
-  if (!foundUser) {
-    const newUser = await User.create({
+  if (!user) {
+    user = await User.create({
       name,
       email,
       provider,
@@ -18,9 +20,9 @@ const handleOAuthUser = async (profile, done) => {
       provider,
       isVerified: email_verified,
     });
-    done(null, newUser);
+    done(null, user);
   } else {
-    done(null, foundUser);
+    done(null, user);
   }
 };
 
@@ -34,10 +36,7 @@ passport.use(
       prompt: 'consent',
     },
     async (accessToken, refreshToken, profile, done) => {
-      console.log('Access Token', accessToken);
-      console.log('end');
-      console.log('Refresh Token', refreshToken);
-      handleOAuthUser(profile, done);
+      handleOAuthUser(done, { profile, refreshToken });
     }
   )
 );

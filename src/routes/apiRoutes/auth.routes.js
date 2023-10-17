@@ -5,6 +5,7 @@ import {
   handleOAuthLogin,
   loginUser,
   logoutUser,
+  refreshAccessToken,
   registerUser,
   verifyEmail,
 } from '../../controllers/auth.controller.js';
@@ -19,9 +20,13 @@ import { ensureAuthenticated } from '../../middleware/auth.middleware.js';
 
 const router = Router();
 
-router
-  .route('/google')
-  .get(passport.authenticate('google', { scope: ['email', 'profile'] }));
+router.route('/google').get(
+  passport.authenticate('google', {
+    accessType: 'offline',
+    prompt: 'consent',
+    scope: ['email', 'profile'],
+  })
+);
 
 router.route('/google/callback').get(
   // prettier-ignore
@@ -34,4 +39,5 @@ router.route('/register').post(registerUserValidator, registerUser);
 router.route('/verify-email/:token').get(verifyEmail);
 router.route('/login').post(loginUserValidator, loginUser);
 router.route('/logout').post(ensureAuthenticated, logoutUser);
+router.route('/refresh-token').post(refreshAccessToken);
 export { router };

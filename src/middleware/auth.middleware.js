@@ -14,6 +14,7 @@ export const ensureAuthenticated = asyncHandler(async (req, res, next) => {
 
   if (!token) throw new createError.Unauthorized('please login');
 
+  // token expired error will be fire from here
   const user = jwt.verify(token, process.env.JWT_ACCESS_TOKEN_SECRET_KEY);
 
   req.user = user;

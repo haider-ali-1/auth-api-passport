@@ -27,7 +27,7 @@ export const generateAccessAndRefreshTokens = (user) => {
     accessTokenPayload,
     JWT_ACCESS_TOKEN_SECRET_KEY,
     {
-      expiresIn: '15m',
+      expiresIn: '10s',
     }
   );
   const refreshToken = jwt.sign(
@@ -43,6 +43,13 @@ export const generateAccessAndRefreshTokens = (user) => {
 export const attachTokenToCookies = (res, name, value, age) => {
   res.cookie(name, value, {
     maxAge: age,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+  });
+};
+
+export const clearCookie = (res, name) => {
+  res.clearCookie(name, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
   });
