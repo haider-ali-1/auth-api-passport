@@ -5,23 +5,24 @@ import {
   asyncHandler,
   attachTokenToCookies,
   clearCookie,
-  createHmac,
+  generateCryptoToken,
   generateAccessAndRefreshTokens,
-  verifyJwt,
 } from '../utils/helpers.js';
 import createError from 'http-errors';
 import { sendEmail } from '../services/email.service.js';
 
 // handle OAuth login
 export const handleOAuthLogin = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user?._id);
+  const user = await User.findById(req.user?._id).select('+refreshTokens');
   const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user);
 
-  user.refreshToken = refreshToken;
+  user.refreshTokens = [...user.refreshTokens, refreshToken];
   await user.save();
 
   attachTokenToCookies(res, 'jwt', refreshToken, 24 * 60 * 60 * 1000);
-  res.status(StatusCodes.OK).redirect(`http://localhost:5000/dashboard`);
+  res
+    .status(StatusCodes.OK)
+    .redirect(`http://localhost:5000/dashboard?${accessToken}`);
 });
 
 // @ Register User
@@ -33,10 +34,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
   // set role admin for first user register
   const role = (await User.countDocuments()) === 0 ? ['admin'] : ['user'];
 
-  const { token, hashedToken } = createHmac(
-    null,
-    process.env.EMAIL_VERIFICATION_TOKEN_SECRET
-  );
+  const { token, hashedToken } = generateCryptoToken();
 
   const user = await User.create({
     name,
@@ -49,7 +47,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
 
   // prettier-ignore
   const verificationURL = `${req.protocol}://${req.get('host')}${req.baseUrl}/verify-email/${token}`
-  const message = `please use this link for email verification\n${verificationURL}\nlink will expire after 15 minutes`;
+  const message = `please click on this link for email verification\n${verificationURL}\nlink will expire after 15 minutes`;
 
   const mailOptions = {
     from: '"Fred Foo 👻" <foo@example.com>',
@@ -153,7 +151,7 @@ export const refreshAccessToken = asyncHandler(async (req, res, next) => {
   const token = req.cookies?.jwt || req.body.refreshToken;
   if (!token) throw new createError.Unauthorized('unauthorized request');
 
-  // check if refresh token is invalid
+  // check if refresh token is invalid (if RT expire it will return error)
   const decoded = jwt.verify(token, process.env.JWT_REFRESH_TOKEN_SECRET_KEY);
 
   // check if user exist (use select)
@@ -166,7 +164,7 @@ export const refreshAccessToken = asyncHandler(async (req, res, next) => {
     user.refreshTokens = [];
     await user.save();
 
-    throw new createError.Unauthorized('invalid or expire refresh token');
+    throw new createError.Unauthorized('access denied token reuse detected');
   }
 
   const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user);
@@ -180,4 +178,74 @@ export const refreshAccessToken = asyncHandler(async (req, res, next) => {
 
   attachTokenToCookies(res, 'jwt', refreshToken, 24 * 60 * 60 * 1000);
   res.status(StatusCodes.OK).json({ status: 'success', accessToken });
+});
+
+// @ Forgot Password
+// @ POST /api/v1/auth/forgot-password
+
+export const forgotPassword = asyncHandler(async (req, res, next) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+
+  if (!user) throw new createError.NotFound("user doesn't exists");
+
+  // send email for password reset
+  try {
+    const { token, hashedToken } = generateCryptoToken();
+
+    // prettier-ignore
+    const passwordResetURL = `${req.protocol}://${req.get('host')}${req.baseUrl}/reset-password/${token}`
+    const message = `please click on this link for reset password\n${passwordResetURL}\nlink will expire after 15 minutes`;
+
+    const mailOptions = {
+      from: '"Fred Foo 👻" <foo@example.com>',
+      to: user.email,
+      subject: 'password reset',
+      text: message,
+    };
+
+    user.passwordResetToken = hashedToken;
+    user.passwordResetTokenExpireAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+    await user.save();
+    await sendEmail(mailOptions);
+    res.status(StatusCodes.OK).json({
+      status: 'success',
+      message: 'email sent for password reset',
+    });
+  } catch (error) {
+    throw new createError.InternalServerError(
+      'failed to send email for reset password'
+    );
+  }
+});
+
+// @ Reset Password
+// @ POST /api/v1/users/auth/reset-password/:token
+
+export const resetPassword = asyncHandler(async (req, res, next) => {
+  const token = req.params.token;
+  const { password } = req.body;
+
+  const { hashedToken } = generateCryptoToken(token);
+
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetTokenExpireAt: { $gte: Date.now() },
+  });
+
+  // check token validity
+  if (!user)
+    throw new createError.Unauthorized(
+      'token is invalid or expire please request a new one'
+    );
+
+  user.passwordResetToken = undefined;
+  user.passwordResetTokenExpireAt = undefined;
+  user.password = password;
+  await user.save();
+  res
+    .status(StatusCodes.OK)
+    .json({ status: 'success', message: 'password reset successfully!' });
 });

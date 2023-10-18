@@ -17,7 +17,7 @@ export const errorHandlerMiddleware = (err, req, res, next) => {
   // if token expire
   if (err.name === 'TokenExpiredError') {
     statusCode = StatusCodes.UNAUTHORIZED;
-    message = 'token expired please login';
+    message = 'token expire';
   }
   // invalid jwt
   else if (err.name === 'JsonWebTokenError') {

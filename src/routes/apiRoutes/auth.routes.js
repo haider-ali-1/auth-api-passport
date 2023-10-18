@@ -2,17 +2,21 @@ import { Router } from 'express';
 import { passport } from '../../passport/index.js';
 import '../../passport/index.js';
 import {
+  forgotPassword,
   handleOAuthLogin,
   loginUser,
   logoutUser,
   refreshAccessToken,
   registerUser,
+  resetPassword,
   verifyEmail,
 } from '../../controllers/auth.controller.js';
 
 import {
+  forgotPasswordValidator,
   loginUserValidator,
   registerUserValidator,
+  resetPasswordValidator,
 } from '../../validators/auth.validators.js';
 import { ensureAuthenticated } from '../../middleware/auth.middleware.js';
 
@@ -40,4 +44,9 @@ router.route('/verify-email/:token').get(verifyEmail);
 router.route('/login').post(loginUserValidator, loginUser);
 router.route('/logout').post(ensureAuthenticated, logoutUser);
 router.route('/refresh-token').post(refreshAccessToken);
+router.route('/forgot-password').post(forgotPasswordValidator, forgotPassword);
+router
+  .route('/reset-password/:token')
+  .patch(resetPasswordValidator, resetPassword);
+
 export { router };

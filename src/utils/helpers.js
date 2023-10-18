@@ -71,9 +71,8 @@ export const filterStackMessage = (stack) => {
   ];
 };
 
-export const createHmac = (randomToken, secretKey) => {
+export const generateCryptoToken = (randomToken) => {
   const token = randomToken || crypto.randomBytes(32).toString('hex');
-  const hmac = crypto.createHmac('sha256', secretKey);
-  const hashedToken = hmac.update(token).digest('hex');
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
   return { token, hashedToken };
 };

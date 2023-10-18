@@ -25,3 +25,23 @@ export const loginUserValidator = validate([
   body('email').trim().notEmpty().withMessage('email is required'),
   body('password').trim().notEmpty().withMessage('password is required'),
 ]);
+
+export const forgotPasswordValidator = validate([
+  body('email')
+    .trim()
+    .notEmpty()
+    .withMessage('email is required')
+    .isEmail()
+    .withMessage('invalid email format'),
+]);
+
+export const resetPasswordValidator = validate([
+  body('password').trim().notEmpty().withMessage('password is required'),
+  body('confirmPassword')
+    .trim()
+    .notEmpty()
+    .withMessage('confirm password is required'),
+  // .custom(async (value, { req }) => {
+  //   return req.password === value ? true : false;
+  // }),
+]);
