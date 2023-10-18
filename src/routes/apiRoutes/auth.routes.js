@@ -47,6 +47,6 @@ router.route('/refresh-token').post(refreshAccessToken);
 router.route('/forgot-password').post(forgotPasswordValidator, forgotPassword);
 router
   .route('/reset-password/:token')
-  .patch(resetPasswordValidator, resetPassword);
+  .post(resetPasswordValidator, resetPassword);
 
 export { router };
