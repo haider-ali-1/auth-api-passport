@@ -75,19 +75,19 @@ export const registerUser = asyncHandler(async (req, res, next) => {
 // @ GET /api/v1/auth/verify-email/:token
 
 export const verifyEmail = asyncHandler(async (req, res, next) => {
-  const emailVerificationToken = req.params.token;
-  // generate hashed token for comapre token in db
-  const { hashedToken } = createHmac(
-    emailVerificationToken,
-    process.env.EMAIL_VERIFICATION_TOKEN_SECRET
-  );
+  const token = req.params.token;
+
+  const { hashedToken } = generateCryptoToken(token);
 
   const user = await User.findOne({
     emailVerificationToken: hashedToken,
     emailVerificationTokenExpireAt: { $gte: Date.now() },
   });
+
   if (!user)
-    throw new createError.NotFound('invalid or expire verification token');
+    throw new createError.NotFound(
+      'token is invalid or expire please request a new one'
+    );
 
   user.isVerified = true;
   user.emailVerificationToken = undefined;
@@ -225,7 +225,7 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
 });
 
 // @ Reset Password
-// @ POST /api/v1/users/auth/reset-password/:token
+// @ PATCH /api/v1/users/auth/reset-password/:token
 
 export const resetPassword = asyncHandler(async (req, res, next) => {
   const token = req.params.token;
