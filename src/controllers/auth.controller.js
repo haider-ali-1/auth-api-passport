@@ -133,7 +133,10 @@ export const logoutUser = asyncHandler(async (req, res, next) => {
 
   // remove refresh token from db
   const user = await User.findById(req.user?._id).select('+refreshTokens');
-  user.refreshTokens = user?.refreshTokens.filter((rt) => rt !== token);
+
+  if (!user) throw new createError.NotFound('invalid user');
+
+  user.refreshTokens = user.refreshTokens.filter((rt) => rt !== token);
   await user.save();
 
   // remove refresh token from cookies
