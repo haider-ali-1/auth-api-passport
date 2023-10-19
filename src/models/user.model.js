@@ -1,6 +1,11 @@
 import bcrypt from 'bcrypt';
 import { Schema, model } from 'mongoose';
-import { SignUpProviders, UserRoles } from '../constants.js';
+import {
+  REGISTER_METHODS,
+  REGISTER_METHOD_ENUM,
+  USER_ROLES,
+  USER_ROLE_ENUM,
+} from '../constants.js';
 
 // const sessionSchema = new Schema({
 //   refreshToken: { type: String, required: true },
@@ -13,6 +18,7 @@ const userSchema = new Schema(
   {
     name: {
       type: String,
+      strict: true,
       required: true,
       trim: true,
     },
@@ -25,20 +31,24 @@ const userSchema = new Schema(
     password: {
       type: String,
       required: function () {
-        return this.provider === SignUpProviders.CUSTOM;
+        return this.registerMethod === REGISTER_METHODS.EMAIL_PASSWORD;
       },
+      trim: true,
       minLength: [6, 'password must be at least 6 characters long'],
       select: false,
     },
-    provider: {
+    registerMethod: {
       type: String,
-      enum: Object.values(SignUpProviders),
-      default: SignUpProviders.CUSTOM,
+      enum: {
+        values: REGISTER_METHOD_ENUM,
+        message: `invalid register method {VALUE}`,
+      },
+      default: REGISTER_METHODS.EMAIL_PASSWORD,
     },
     googleId: {
       type: String,
       required: function () {
-        return this.provider === SignUpProviders.GOOGLE;
+        return this.registerMethod === REGISTER_METHODS.GOOGLE;
       },
       unique: true,
       select: false,
@@ -49,18 +59,18 @@ const userSchema = new Schema(
     role: {
       type: [String],
       enum: {
-        values: Object.values(UserRoles),
-        message: `{VALUE} is not supported`,
+        values: USER_ROLE_ENUM,
+        message: `invalid role type {VALUE}`,
       },
-      default: [UserRoles.USER],
+      default: [USER_ROLES.USER],
     },
     isVerified: { type: Boolean, default: false },
-    // sessions: [sessionSchema],
     refreshTokens: [{ type: String, select: false }],
     emailVerificationToken: { type: String, select: false },
     emailVerificationTokenExpireAt: { type: Date, select: false },
     passwordResetToken: { type: String, select: false },
     passwordResetTokenExpireAt: { type: Date, select: false },
+    // sessions: [sessionSchema],
   },
   {
     timestamps: true,

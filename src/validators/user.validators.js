@@ -3,7 +3,7 @@ import { validate } from './validate.js';
 import { User } from '../models/user.model.js';
 import createError from 'http-errors';
 import mongoose from 'mongoose';
-import { UserRoles } from '../constants.js';
+import { USER_ROLE_ENUM } from '../constants.js';
 
 export const updateUserValidator = validate([
   body('email')
@@ -13,5 +13,5 @@ export const updateUserValidator = validate([
 ]);
 
 export const changeUserRoleValidator = validate([
-  body('role').isIn(Object.values(UserRoles)).withMessage('invalid role type'),
+  body('role').isIn(USER_ROLE_ENUM).withMessage('invalid role type'),
 ]);

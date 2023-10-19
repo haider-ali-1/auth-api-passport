@@ -1,7 +1,5 @@
-import { body, param } from 'express-validator';
+import { body } from 'express-validator';
 import { validate } from './validate.js';
-import { User } from '../models/user.model.js';
-import createError from 'http-errors';
 
 export const registerUserValidator = validate([
   body('name').trim().notEmpty().withMessage('name is required'),
@@ -16,7 +14,7 @@ export const registerUserValidator = validate([
     .trim()
     .notEmpty()
     .withMessage('password is required')
-    .if(body('email').notEmpty())
+    .if(body('password').notEmpty())
     .isLength({ min: 6 })
     .withMessage('password must be at least 6 characters long'),
 ]);

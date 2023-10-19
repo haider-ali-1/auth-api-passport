@@ -24,6 +24,15 @@ import { ensureAuthenticated } from '../../middleware/auth.middleware.js';
 
 const router = Router();
 
+router.post('/register', registerUserValidator, registerUser);
+router.get('/verify-email/:token', verifyEmail);
+router.post('/login', loginUserValidator, loginUser);
+router.post('/logout', ensureAuthenticated, logoutUser);
+router.post('/refresh-token', refreshAccessToken);
+router.post('/forgot-password', forgotPasswordValidator, forgotPassword);
+router.post('/reset-password/:token', resetPasswordValidator, resetPassword);
+
+// Google
 router.route('/google').get(
   passport.authenticate('google', {
     accessType: 'offline',
@@ -33,20 +42,11 @@ router.route('/google').get(
 );
 
 router.route('/google/callback').get(
-  // prettier-ignore
-  passport.authenticate('google', {session: false, failureRedirect: '/login' }),
+  passport.authenticate('google', {
+    session: false,
+    failureRedirect: '/login',
+  }),
   handleOAuthLogin
 );
-
-// URL /api/v1/auth
-router.route('/register').post(registerUserValidator, registerUser);
-router.route('/verify-email/:token').get(verifyEmail);
-router.route('/login').post(loginUserValidator, loginUser);
-router.route('/logout').post(ensureAuthenticated, logoutUser);
-router.route('/refresh-token').post(refreshAccessToken);
-router.route('/forgot-password').post(forgotPasswordValidator, forgotPassword);
-router
-  .route('/reset-password/:token')
-  .post(resetPasswordValidator, resetPassword);
 
 export { router };
