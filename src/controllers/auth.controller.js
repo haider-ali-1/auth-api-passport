@@ -31,8 +31,6 @@ export const handleOAuthLogin = asyncHandler(async (req, res, next) => {
 export const registerUser = asyncHandler(async (req, res, next) => {
   const { name, email, password } = req.body;
 
-  //
-
   // set role admin for first user register
   const role = (await User.countDocuments()) === 0 ? ['admin'] : ['user'];
 
