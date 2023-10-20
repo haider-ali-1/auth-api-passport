@@ -8,6 +8,7 @@ import {
   logoutUser,
   refreshAccessToken,
   registerUser,
+  resendEmail,
   resetPassword,
   verifyEmail,
 } from '../../controllers/auth.controller.js';
@@ -25,6 +26,7 @@ import { ensureAuthenticated } from '../../middleware/auth.middleware.js';
 const router = Router();
 
 router.post('/register', registerUserValidator, registerUser);
+router.post('/resend-email-verification', ensureAuthenticated, resendEmail);
 router.get('/verify-email/:token', verifyEmail);
 router.post('/login', loginUserValidator, loginUser);
 router.post('/logout', ensureAuthenticated, logoutUser);

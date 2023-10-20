@@ -45,18 +45,18 @@ export const registerUser = asyncHandler(async (req, res, next) => {
     emailVerificationTokenExpireAt: Date.now() + 15 * 60 * 1000, // 15 minutes
   });
 
-  // prettier-ignore
-  const verificationURL = `${req.protocol}://${req.get('host')}${req.baseUrl}/verify-email/${token}`
-  const message = `please click on this link for email verification\n${verificationURL}\nlink will expire after 15 minutes`;
-
-  const mailOptions = {
-    from: '"Fred Foo 👻" <foo@example.com>',
-    to: user.email,
-    subject: 'email verification link',
-    text: message,
-  };
-
   try {
+    // prettier-ignore
+    const verificationURL = `${req.protocol}://${req.get('host')}${req.baseUrl}/verify-email/${token}`
+    const message = `please click on this link for email verification\n${verificationURL}\nlink will expire after 15 minutes`;
+
+    const mailOptions = {
+      from: '"Fred Foo 👻" <foo@example.com>',
+      to: user.email,
+      subject: 'email verification',
+      text: message,
+    };
+
     await sendEmail(mailOptions);
   } catch (error) {
     throw new createError.InternalServerError(
@@ -64,10 +64,53 @@ export const registerUser = asyncHandler(async (req, res, next) => {
     );
   }
 
+  console.log(token, hashedToken);
+
   res.status(StatusCodes.CREATED).json({
     status: 'success',
-    message:
-      'an email has been sent to your email address please verify before login',
+    message: 'an email has been sent to your email address',
+  });
+});
+
+// @ Resend Email Verification
+// /api/v1/auth/resend-email-verification
+
+export const resendEmail = asyncHandler(async (req, res, next) => {
+  const userId = req.user?._id;
+  const user = await User.findById(userId);
+  if (!user) throw new createError.NotFound('user not found');
+
+  if (user.isVerified)
+    throw new createError.BadRequest('email already verified');
+
+  const { token, hashedToken } = generateCryptoToken();
+
+  user.emailVerificationToken = hashedToken;
+  user.emailVerificationTokenExpireAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+  await user.save();
+
+  try {
+    // prettier-ignore
+    const verificationURL = `${req.protocol}://${req.get('host')}${req.baseUrl}/verify-email/${token}`
+    const message = `please click on this link for email verification\n${verificationURL}\nlink will expire after 15 minutes`;
+
+    const mailOptions = {
+      from: '"Fred Foo 👻" <foo@example.com>',
+      to: user.email,
+      subject: 'email verification',
+      text: message,
+    };
+
+    await sendEmail(mailOptions);
+  } catch (error) {
+    throw new createError.InternalServerError(
+      'an error has been occured during sending verification email'
+    );
+  }
+
+  res.status(StatusCodes.OK).json({
+    status: 'success',
+    message: 'an email has been send to your email address',
   });
 });
 

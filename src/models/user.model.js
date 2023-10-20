@@ -49,7 +49,6 @@ const userSchema = new Schema(
       required: function () {
         return this.registerMethod === REGISTER_METHODS.GOOGLE;
       },
-      unique: true,
     },
     profileImage: {
       type: String,
@@ -77,16 +76,10 @@ const userSchema = new Schema(
   }
 );
 
+// query middleware
 userSchema.pre('save', async function (next) {
-  // if (!this.isModified('password') && !this.isModified('googleId'))
-  //   return next();
-
-  if (this.isModified('googleId')) {
-    return (this.googleId = await bcrypt.hash(this.googleId, 10));
-  } else if (this.isModified('password')) {
-    return (this.password = await bcrypt.hash(this.password, 10));
-  }
-  next();
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 10);
 });
 
 userSchema.method('compareWithHash', async function (value, field) {

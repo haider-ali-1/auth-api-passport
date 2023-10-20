@@ -8,7 +8,7 @@ import { USER_ROLES } from '../constants.js';
 // @ GET /api/v1/users
 
 export const getAllUsers = asyncHandler(async (req, res, next) => {
-  const users = await User.find({});
+  const users = await User.find({ role: { $ne: USER_ROLES.ADMIN } });
   res.status(StatusCodes.OK).json({ status: 'success', data: { users } });
 });
 
@@ -89,5 +89,5 @@ export const changeUserRole = asyncHandler(async (req, res, next) => {
 
   user.role = [...user.role, role];
   await user.save();
-  res.json({ status: 'success' });
+  res.json({ status: 'success', message: 'role updated' });
 });
