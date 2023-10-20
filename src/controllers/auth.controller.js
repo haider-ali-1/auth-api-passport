@@ -60,7 +60,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
     await sendEmail(mailOptions);
   } catch (error) {
     throw new createError.InternalServerError(
-      'an error has been occured during sending verification email'
+      'failed to send verification email'
     );
   }
 
@@ -104,13 +104,13 @@ export const resendEmail = asyncHandler(async (req, res, next) => {
     await sendEmail(mailOptions);
   } catch (error) {
     throw new createError.InternalServerError(
-      'an error has been occured during sending verification email'
+      'failed to send verification email'
     );
   }
 
   res.status(StatusCodes.OK).json({
     status: 'success',
-    message: 'an email has been send to your email address',
+    message: 'verification email sent',
   });
 });
 

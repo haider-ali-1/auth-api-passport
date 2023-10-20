@@ -76,3 +76,24 @@ export const generateCryptoToken = (randomToken) => {
   const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
   return { token, hashedToken };
 };
+
+export const sendVerificationEmail = async () => {
+  try {
+    // prettier-ignore
+    const verificationURL = `${req.protocol}://${req.get('host')}${req.baseUrl}/verify-email/${token}`
+    const message = `please click on this link for email verification\n${verificationURL}\nlink will expire after 15 minutes`;
+
+    const mailOptions = {
+      from: '"Fred Foo 👻" <foo@example.com>',
+      to: user.email,
+      subject: 'email verification',
+      text: message,
+    };
+
+    await sendEmail(mailOptions);
+  } catch (error) {
+    throw new createError.InternalServerError(
+      'failed to send verification email'
+    );
+  }
+};
