@@ -35,7 +35,6 @@ const userSchema = new Schema(
       },
       trim: true,
       minLength: [6, 'password must be at least 6 characters long'],
-      select: false,
     },
     registerMethod: {
       type: String,
@@ -51,7 +50,6 @@ const userSchema = new Schema(
         return this.registerMethod === REGISTER_METHODS.GOOGLE;
       },
       unique: true,
-      select: false,
     },
     profileImage: {
       type: String,
@@ -65,11 +63,11 @@ const userSchema = new Schema(
       default: [USER_ROLES.USER],
     },
     isVerified: { type: Boolean, default: false },
-    refreshTokens: [{ type: String, select: false }],
-    emailVerificationToken: { type: String, select: false },
-    emailVerificationTokenExpireAt: { type: Date, select: false },
-    passwordResetToken: { type: String, select: false },
-    passwordResetTokenExpireAt: { type: Date, select: false },
+    refreshTokens: [{ type: String }],
+    emailVerificationToken: { type: String },
+    emailVerificationTokenExpireAt: { type: Date },
+    passwordResetToken: { type: String },
+    passwordResetTokenExpireAt: { type: Date },
     // sessions: [sessionSchema],
   },
   {

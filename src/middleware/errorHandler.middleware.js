@@ -5,26 +5,28 @@ import createError from 'http-errors';
 import mongoose from 'mongoose';
 
 export const errorHandlerMiddleware = (err, req, res, next) => {
-  console.log(err.name);
+  const { HttpError: expressVlidatorError } = createError;
+  const { TokenExpiredError, JsonWebTokenError } = jwt;
+  const { CastError, ValidationError } = mongoose.Error;
 
   let statusCode = StatusCodes.INTERNAL_SERVER_ERROR;
   let message = getReasonPhrase(statusCode);
   let errors; // array[]
 
   // Express Validator Errors
-  if (err instanceof createError.HttpError) {
+  if (err instanceof expressVlidatorError) {
     statusCode = err.statusCode;
     message = err.message;
     errors = err.errors;
   }
 
   // JWT Errors
-  else if (err instanceof jwt.TokenExpiredError) {
+  else if (err instanceof TokenExpiredError) {
     statusCode = StatusCodes.UNAUTHORIZED;
-    message = 'token expire blah';
+    message = 'token expired';
   }
   //
-  else if (err instanceof jwt.JsonWebTokenError) {
+  else if (err instanceof JsonWebTokenError) {
     statusCode = StatusCodes.UNAUTHORIZED;
     message = 'invalid token please login';
   }
@@ -32,13 +34,17 @@ export const errorHandlerMiddleware = (err, req, res, next) => {
   // Mongoose Errors
 
   // Invalid ObjectId Error
-  else if (err instanceof mongoose.Error.CastError) {
-    statusCode = StatusCodes.NOT_FOUND;
-    message = `invalid ${err.path}`;
+  else if (err instanceof CastError) {
+    // prettier-ignore
+    const {path, value: { _id }} = err
+    statusCode = StatusCodes.BAD_REQUEST;
+    message = `invalid ${path}`;
+    errors = [{ field: path, message: `invalid ${path}`, value: _id }];
   }
 
   //
-  else if (err instanceof mongoose.Error.ValidationError) {
+  else if (err instanceof ValidationError) {
+    res.json({ err });
     statusCode = StatusCodes.BAD_REQUEST;
     message = 'invalid input data';
     errors = Object.values(err.errors).map((err) => {

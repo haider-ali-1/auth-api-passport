@@ -27,7 +27,7 @@ export const generateAccessAndRefreshTokens = (user) => {
     accessTokenPayload,
     JWT_ACCESS_TOKEN_SECRET_KEY,
     {
-      expiresIn: '10s',
+      expiresIn: '15m',
     }
   );
   const refreshToken = jwt.sign(

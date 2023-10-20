@@ -13,7 +13,7 @@ import { sendEmail } from '../services/email.service.js';
 
 // handle OAuth login
 export const handleOAuthLogin = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user?._id).select('+refreshTokens');
+  const user = await User.findById(req.user?._id);
   const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user);
 
   user.refreshTokens = [...user.refreshTokens, refreshToken];
@@ -106,14 +106,14 @@ export const loginUser = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
 
   // check if email and password are correct
-  const user = await User.findOne({ email }).select('+password +refreshTokens');
+  const user = await User.findOne({ email });
   const passwordMatch = await user?.compareWithHash(password, 'password');
   if (!user || !passwordMatch)
     throw new createError.NotFound('incorrect email or password');
 
   const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user);
 
-  user.refreshTokens = [...user.refreshTokens, refreshToken];
+  user.refreshTokens = [...(user.refreshTokens || []), refreshToken];
   await user.save();
   attachTokenToCookies(res, 'jwt', refreshToken, 24 * 60 * 60 * 1000); // 24 hours
 
@@ -132,7 +132,7 @@ export const logoutUser = asyncHandler(async (req, res, next) => {
   if (!token) throw new createError.Unauthorized('unauthorized request');
 
   // remove refresh token from db
-  const user = await User.findById(req.user?._id).select('+refreshTokens');
+  const user = await User.findById(req.user?._id);
 
   if (!user) throw new createError.NotFound('invalid user');
 
@@ -158,7 +158,7 @@ export const refreshAccessToken = asyncHandler(async (req, res, next) => {
   const decoded = jwt.verify(token, process.env.JWT_REFRESH_TOKEN_SECRET_KEY);
 
   // check if user exist (use select)
-  const user = await User.findById(decoded?._id).select('+refreshTokens');
+  const user = await User.findById(decoded?._id);
   if (!user) throw new createError.Unauthorized('invalid user id');
 
   // check if refresh token reuse

@@ -1,28 +1,8 @@
 import { StatusCodes } from 'http-status-codes';
 import { User } from '../models/user.model.js';
-import {
-  asyncHandler,
-  attachTokenToCookies,
-  generateAccessAndRefreshTokens,
-} from '../utils/helpers.js';
+import { asyncHandler } from '../utils/helpers.js';
 import createError from 'http-errors';
-
-// @ DESC  refresh the access token
-// @ GET   /api/v1/users/refresh-token
-// @ ROUTE Protected
-
-export const refreshToken = asyncHandler(async (req, res, next) => {
-  const refreshToken = req.cookies?.jwt || req.body.refreshToken;
-  if (!refreshToken) {
-    throw new createError.Unauthorized('please login');
-  }
-
-  const user = await User.findOne({ refreshToken });
-  if (!user) throw new createError.Unauthorized('unauthorized request');
-
-  const { accessToken } = generateAccessAndRefreshTokens(user);
-  res.status(StatusCodes.OK).json({ accessToken });
-});
+import { USER_ROLES } from '../constants.js';
 
 // @ Get All Users
 // @ GET /api/v1/users
@@ -38,26 +18,17 @@ export const getAllUsers = asyncHandler(async (req, res, next) => {
 export const getSingleUser = asyncHandler(async (req, res, next) => {
   const { userId } = req.params;
   const user = await User.findById(userId);
-  if (!user) throw new createError.NotFound(`user not found`);
-  res.status(StatusCodes.OK).json({ status: 'success', data: { user } });
-});
+  if (!user) throw new createError.NotFound(`invalid user id`);
 
-// @ Delete User
-// @ Delete /api/v1/users/:userId
+  const checkIfUserIsAdmin = (user, userId) => {
+    const { _id, role } = user;
+    if (_id === userId) return;
+    if (role === USER_ROLES.ADMIN) return;
+    throw new createError.Unauthorized(
+      'you dont have permission to perform this action'
+    );
+  };
 
-export const deleteUser = asyncHandler(async (req, res, next) => {
-  const { userId } = req.params;
-  await User.findByIdAndDelete(userId);
-  res
-    .status(StatusCodes.OK)
-    .json({ status: 'success', data: { user: updatedUser } });
-});
-
-// @ Show Current User
-// @ GET /api/v1/users/profile
-
-export const getCurrentUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user?._id);
   res.status(StatusCodes.OK).json({ status: 'success', data: { user } });
 });
 
@@ -79,16 +50,44 @@ export const updateUser = asyncHandler(async (req, res, next) => {
     .json({ status: 'success', data: { user: updatedUser } });
 });
 
+// @ Delete User
+// @ Delete /api/v1/users/:userId
+
+export const deleteUser = asyncHandler(async (req, res, next) => {
+  const { userId } = req.params;
+
+  const user = await User.findById(userId);
+  if (!user) throw new createError.NotFound('invalid user id');
+
+  await user.deleteOne();
+  res
+    .status(StatusCodes.OK)
+    .json({ status: 'success', message: 'user deleted successfully' });
+});
+
+// @ Show Current User
+// @ GET /api/v1/users/profile
+
+export const getCurrentUser = asyncHandler(async (req, res, next) => {
+  const { _id } = req.user;
+  const user = await User.findById(_id);
+  if (!user) throw new createError.NotFound('invalid user id');
+  res.status(StatusCodes.OK).json({ status: 'success', data: { user } });
+});
+
 // @ Change User Role
 // @ PATCH /api/v1/users/:userId/role
 
 export const changeUserRole = asyncHandler(async (req, res, next) => {
   const { userId } = req.params;
-  const role = req.body;
+  const { role } = req.body;
   const user = await User.findById(userId);
   if (!user) throw new createError.NotFound('invalid user id');
 
-  await User.findByIdAndUpdate(userId, { $set: role }, { runValidators: true });
+  if (user?.role.includes(role))
+    throw new createError.BadRequest(`user already has this role`);
 
+  user.role = [...user.role, role];
+  await user.save();
   res.json({ status: 'success' });
 });
