@@ -1,7 +1,9 @@
-import { StatusCodes } from 'http-status-codes';
-import { User } from '../models/user.model.js';
-import { asyncHandler } from '../utils/helpers.js';
 import createError from 'http-errors';
+import { StatusCodes } from 'http-status-codes';
+
+import { User } from '../models/user.model.js';
+
+import { asyncHandler } from '../utils/helpers.js';
 import { USER_ROLES } from '../constants.js';
 
 // @ Get All Users
@@ -37,7 +39,7 @@ export const getSingleUser = asyncHandler(async (req, res, next) => {
 
 export const updateUser = asyncHandler(async (req, res, next) => {
   const userId = req.user?._id;
-  const { name, email } = req.body;
+  const { name } = req.body;
 
   const updatedUser = await User.findByIdAndUpdate(
     userId,

@@ -9,7 +9,7 @@ import {
   generateAccessAndRefreshTokens,
 } from '../utils/helpers.js';
 import createError from 'http-errors';
-import { sendEmail } from '../services/email.service.js';
+import { sendEmail } from '../utils/nodemailer.js';
 
 // handle OAuth login
 export const handleOAuthLogin = asyncHandler(async (req, res, next) => {
@@ -129,7 +129,7 @@ export const verifyEmail = asyncHandler(async (req, res, next) => {
 
   if (!user)
     throw new createError.NotFound(
-      'token is invalid or expire please request a new one'
+      'verification token is invalid or expire please request a new one'
     );
 
   user.isVerified = true;
@@ -156,7 +156,7 @@ export const loginUser = asyncHandler(async (req, res, next) => {
 
   const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user);
 
-  user.refreshTokens = [...(user.refreshTokens || []), refreshToken];
+  user.refreshTokens = [...user.refreshTokens, refreshToken];
   await user.save();
   attachTokenToCookies(res, 'jwt', refreshToken, 24 * 60 * 60 * 1000); // 24 hours
 
@@ -177,7 +177,7 @@ export const logoutUser = asyncHandler(async (req, res, next) => {
   // remove refresh token from db
   const user = await User.findById(req.user?._id);
 
-  if (!user) throw new createError.NotFound('invalid user');
+  if (!user) throw new createError.NotFound('user not found');
 
   user.refreshTokens = user.refreshTokens.filter((rt) => rt !== token);
   await user.save();
@@ -202,7 +202,7 @@ export const refreshAccessToken = asyncHandler(async (req, res, next) => {
 
   // check if user exist (use select)
   const user = await User.findById(decoded?._id);
-  if (!user) throw new createError.Unauthorized('invalid user id');
+  if (!user) throw new createError.Unauthorized('user not found');
 
   // check if refresh token reuse
   if (!user.refreshTokens.includes(token)) {
@@ -234,7 +234,7 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
 
   const user = await User.findOne({ email });
 
-  if (!user) throw new createError.NotFound("user doesn't exists");
+  if (!user) throw new createError.NotFound('user not found');
 
   // send email for password reset
   try {
@@ -258,7 +258,7 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
     await sendEmail(mailOptions);
     res.status(StatusCodes.OK).json({
       status: 'success',
-      message: 'email sent for password reset',
+      message: 'email sent to your mail address for reset password',
     });
   } catch (error) {
     throw new createError.InternalServerError(
@@ -284,7 +284,7 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
   // check token validity
   if (!user)
     throw new createError.Unauthorized(
-      'token is invalid or expire please request a new one'
+      'password reset token is invalid or expire please request a new one'
     );
 
   user.passwordResetToken = undefined;
