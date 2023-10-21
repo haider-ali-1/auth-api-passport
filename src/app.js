@@ -10,8 +10,8 @@ import { __dirname } from './utils/helpers.js';
 import { notFoundMiddleware } from './middleware/notFound.middleware.js';
 import { errorHandlerMiddleware } from './middleware/errorHandler.middleware.js';
 
-import { router as AuthRouter } from './routes/apiRoutes/auth.routes.js';
-import { router as UserRouter } from './routes/apiRoutes/user.routes.js';
+import { router as AuthRouter } from './routes/api/auth.routes.js';
+import { router as UserRouter } from './routes/api/user.routes.js';
 import { router as ViewRouter } from './routes/viewRoutes/view.routes.js';
 
 const app = express();
